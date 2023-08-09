@@ -34,7 +34,7 @@ public class ItemController {
 
     @GetMapping("/search")
     public ResponseEntity<Collection<ItemDto>> searchItems(@RequestParam(name = "text") String text) {
-        return ResponseEntity.ok().body(itemService.searchItemsByDescription(text));
+        return ResponseEntity.ok().body(itemService.searchItems(text));
     }
 
     @DeleteMapping("/{itemId}")

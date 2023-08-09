@@ -64,13 +64,13 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public Collection<ItemDto> searchItemsByDescription(String text) {
+    public Collection<ItemDto> searchItems(String text) {
         if (text.isBlank()) {
             return new ArrayList<>();
         }
         return itemStorage.getAllItems()
                 .stream()
-                .filter(i -> i.getDescription().toLowerCase().contains(text.toLowerCase()) && i.getAvailable())
+                .filter(i -> (i.getName().toLowerCase().contains(text.toLowerCase()) || i.getDescription().toLowerCase().contains(text.toLowerCase())) && i.getAvailable())
                 .map(itemMapper::toItemDto)
                 .collect(Collectors.toList());
     }

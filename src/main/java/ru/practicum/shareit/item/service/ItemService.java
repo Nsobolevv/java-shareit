@@ -17,5 +17,5 @@ public interface ItemService {
 
     void removeItem(Long id);
 
-    Collection<ItemDto> searchItemsByDescription(String keyword);
+    Collection<ItemDto> searchItems(String keyword);
 }

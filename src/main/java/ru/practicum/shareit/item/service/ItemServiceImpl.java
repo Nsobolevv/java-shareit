@@ -105,7 +105,7 @@ public class ItemServiceImpl implements ItemService {
         List<Booking> bookings = bookingRepository.findByItemId(itemId,
                 Sort.by(Sort.Direction.DESC, "start"));
         List<BookingDtoShort> bookingDtoShorts = bookings.stream()
-                .filter(booking -> booking.getStatus()!=Status.REJECTED)
+                .filter(booking -> booking.getStatus() != Status.REJECTED)
                 .map(bookingMapper::convertToDtoShort)
                 .collect(Collectors.toList());
         if (item.getUserId() == userId) {   /** Бронирования показываем только владельцу вещи**/

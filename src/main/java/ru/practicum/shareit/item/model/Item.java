@@ -1,28 +1,39 @@
 package ru.practicum.shareit.item.model;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import ru.practicum.shareit.request.model.ItemRequest;
-import ru.practicum.shareit.user.model.User;
+import lombok.Setter;
+import lombok.ToString;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
-@Data
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@Getter
+@Setter
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "items")
 public class Item {
-    Long id;
-    @NotBlank
-    String name;
-    @NotBlank
-    String description;
-    @NotNull
-    Boolean available;
-    User owner;
-    ItemRequest request;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+
+    @Column(name = "user_id", nullable = false)
+    private long userId;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false, length = 1000)
+    private String description;
+
+    @Column(nullable = false)
+    private Boolean available;
 }

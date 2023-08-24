@@ -44,7 +44,7 @@ public class UserController {
                 .path("/users/{userId}")
                 .build();
         Logger.logRequest(HttpMethod.GET, uriComponents.toUriString(), String.valueOf(userId));
-        return userService.getUser(userId);
+        return userService.getUserById(userId);
     }
 
     @GetMapping

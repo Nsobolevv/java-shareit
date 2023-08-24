@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
     public  UserDto updateUser(long id, UserDto userDto) {
         User user = userMapper.convertFromDto(userDto);
         try {
-            User targetUser = getUserById(id);
+            User targetUser = userMapper.convertFromDto(getUserById(id));
             if (StringUtils.hasLength(user.getEmail())) {
                 targetUser.setEmail(user.getEmail());
             }
@@ -75,22 +75,7 @@ public class UserServiceImpl implements UserService {
 
     @Transactional(readOnly = true)
     @Override
-    public User getUserById(long userId) {
-        User user = userRepository.findById(userId).orElseThrow(() ->
-                new ObjectNotFoundException(String.format("Пользователь с id %s не найден", userId)));
-        UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                .scheme(protocol)
-                .host(host)
-                .port(port)
-                .path("/users/{userId}")
-                .build();
-        Logger.logSave(HttpMethod.GET, uriComponents.toUriString(), user.toString());
-        return user;
-    }
-
-    @Transactional(readOnly = true)
-    @Override
-    public UserDto getUser(long userId) {
+    public UserDto getUserById(long userId) {
         User user = userRepository.findById(userId).orElseThrow(() ->
                 new ObjectNotFoundException(String.format("Пользователь с id %s не найден", userId)));
         UriComponents uriComponents = UriComponentsBuilder.newInstance()

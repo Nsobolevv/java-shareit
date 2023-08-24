@@ -19,6 +19,7 @@ import ru.practicum.shareit.exception.ObjectNotFoundException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.logger.Logger;
+import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.service.UserService;
 
@@ -32,6 +33,7 @@ public class BookingServiceImpl implements BookingService {
     private final ItemRepository itemRepository;
     private final UserService userService;
     private final BookingMapper bookingMapper;
+    private final UserMapper userMapper;
     private final BookingRepository bookingRepository;
     private final String host = "localhost";
     private final String port = "8080";
@@ -48,7 +50,7 @@ public class BookingServiceImpl implements BookingService {
                 .path("/bookings")
                 .build();
         Logger.logInfo(HttpMethod.POST, uriComponents.toUriString(), booking.toString());
-        User booker = userService.getUserById(bookerId);
+        User booker = userMapper.convertFromDto(userService.getUserById(bookerId));
         Item item = itemRepository.findById(booking.getItem().getId()).orElseThrow(() ->
                 new ObjectNotFoundException(String.format("Вещь с id %s не найдена", booking.getItem().getId())));
         validateAddBooking(bookerId, booking, item);
@@ -63,17 +65,13 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     @Override
     public BookingDto approveOrRejectBooking(long ownerId, long bookingId, boolean approved, AccessLevel accessLevel) {
-        User owner = userService.getUserById(ownerId);
+        User owner = userMapper.convertFromDto(userService.getUserById(ownerId));
         Booking booking = getBookingById(bookingId, owner.getId(), accessLevel);
         if (booking.getStatus().equals(Status.APPROVED)) {
             throw new InvalidDataException(String.format("У бронирования с id %d уже стоит статус %s",
                     bookingId, Status.APPROVED.name()));
         }
-        if (approved) {
-            booking.setStatus(Status.APPROVED);
-        } else {
-            booking.setStatus(Status.REJECTED);
-        }
+        booking.setStatus((approved ? Status.APPROVED : Status.REJECTED));
         Booking bookingSaved = bookingRepository.save(booking);
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
@@ -89,7 +87,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     @Override
     public Booking getBookingById(long bookingId, long userId, AccessLevel accessLevel) {
-        User user = userService.getUserById(userId);
+        User user = userMapper.convertFromDto(userService.getUserById(userId));
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Бронирование с id %d не найдено", bookingId)));
         if (isUnableToAccess(user.getId(), booking, accessLevel)) {
@@ -109,7 +107,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     @Override
     public BookingDto getBooking(long bookingId, long userId, AccessLevel accessLevel) {
-        User user = userService.getUserById(userId);
+        User user = userMapper.convertFromDto(userService.getUserById(userId));
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Бронирование с id %d не найдено", bookingId)));
         if (isUnableToAccess(user.getId(), booking, accessLevel)) {
@@ -129,7 +127,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     @Override
     public List<BookingDto> getBookingsOfCurrentUser(State state, long bookerId) {
-        User booker = userService.getUserById(bookerId);
+        User booker = userMapper.convertFromDto(userService.getUserById(bookerId));
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
         List<Booking> bookings;
         switch (state) {
@@ -173,7 +171,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     @Override
     public List<BookingDto> getBookingsOfOwner(State state, long ownerId) {
-        User owner = userService.getUserById(ownerId);
+        User owner = userMapper.convertFromDto(userService.getUserById(ownerId));
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
         List<Booking> bookings;
         switch (state) {
@@ -219,28 +217,27 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private boolean isUnableToAccess(long userId, Booking booking, AccessLevel accessLevel) {
-        boolean isUnable = true;
         switch (accessLevel) {
             case OWNER:
-                isUnable = booking.getItem().getUserId() != userId;
-                break;
+                return booking.getItem().getUserId() != userId;
             case BOOKER:
-                isUnable = booking.getBooker().getId() != userId;
-                break;
+                return booking.getBooker().getId() != userId;
             case OWNER_AND_BOOKER:
-                isUnable = !(booking.getItem().getUserId() == userId || booking.getBooker().getId() == userId);
-                break;
+                return !(booking.getItem().getUserId() == userId || booking.getBooker().getId() == userId);
+            default:
+                throw new AccessException("Неизвестный уровень допуска");
         }
-        return isUnable;
     }
 
     private void validateAddBooking(long bookerId, Booking booking, Item item) {
         if (bookerId == item.getUserId()) {
             throw new AccessException("Владелец вещи не может бронировать свои вещи.");
-        } else if (!item.getAvailable()) {
+        }
+        if (!item.getAvailable()) {
             throw new ObjectNotAvailableException(String.format("Вещь с id %d не доступна для бронирования.",
                     item.getId()));
-        } else if (isNotValidDate(booking.getStart(), booking.getEnd())) {
+        }
+        if (isNotValidDate(booking.getStart(), booking.getEnd())) {
             throw new InvalidDataException("Даты бронирования выбраны некорректно.");
         }
     }

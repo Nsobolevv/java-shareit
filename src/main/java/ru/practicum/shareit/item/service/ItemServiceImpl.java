@@ -23,6 +23,7 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.logger.Logger;
+import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.service.UserService;
 import org.springframework.util.StringUtils;
@@ -39,6 +40,7 @@ public class ItemServiceImpl implements ItemService {
     private final UserService userService;
     private final BookingRepository bookingRepository;
     private final ItemMapper itemMapper;
+    private final UserMapper userMapper;
     private final BookingMapper bookingMapper;
     private final CommentRepository commentRepository;
     private final CommentMapper commentMapper;
@@ -50,7 +52,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public ItemDto addItem(long userId, ItemDto itemDto) {
         Item item = itemMapper.convertFromDto(itemDto);
-        User user = userService.getUserById(userId);
+        User user = userMapper.convertFromDto(userService.getUserById(userId));
         item.setUserId(user.getId());
         Item itemSaved = itemRepository.save(item);
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
@@ -67,13 +69,13 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public ItemDto updateItem(long userId, long itemId, ItemDto itemDto) {
         Item item = itemMapper.convertFromDto(itemDto);
-        User user = userService.getUserById(userId);
+        User user = userMapper.convertFromDto(userService.getUserById(userId));
         Item targetItem = itemRepository.findById(itemId).orElseThrow(() ->
                 new ObjectNotFoundException(String.format("Вещь с id %s не найдена", itemId)));
         if (targetItem.getUserId() != user.getId()) {
             throw new ObjectNotFoundException(String.format("У пользователя с id %s не найдена вещь с id %s",
                     userId, itemId));
-        } else {
+        }
             if (item.getAvailable() != null) {
                 targetItem.setAvailable(item.getAvailable());
             }
@@ -92,7 +94,6 @@ public class ItemServiceImpl implements ItemService {
                     .build();
             Logger.logSave(HttpMethod.PATCH, uriComponents.toUriString(), itemSaved.toString());
             return itemMapper.convertToDto(itemSaved);
-        }
     }
 
     @Transactional(readOnly = true)
@@ -130,7 +131,7 @@ public class ItemServiceImpl implements ItemService {
     @Transactional(readOnly = true)
     @Override
     public List<ItemDto> getAllItems(long userId) {
-        User user = userService.getUserById(userId);
+        User user = userMapper.convertFromDto(userService.getUserById(userId));
         List<Item> items = itemRepository.findAllByUserIdOrderById(user.getId());
         List<ItemDto> itemsDto = items.stream()
                 .map(itemMapper::convertToDto)
@@ -164,12 +165,7 @@ public class ItemServiceImpl implements ItemService {
     @Transactional(readOnly = true)
     @Override
     public List<ItemDto> searchItems(String text) {
-        List<Item> items;
-        if (text.isBlank()) {
-            items = new ArrayList<>();
-        } else {
-            items = itemRepository.findByNameOrDescriptionLike(text.toLowerCase());
-        }
+        List<Item> items = text.isBlank() ? new ArrayList<>() : itemRepository.findByNameOrDescriptionLike(text.toLowerCase());
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -204,7 +200,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public CommentDto addComment(long userId, long itemId, CommentDto commentDto) {
         Comment comment = commentMapper.convertFromDto(commentDto);
-        User user = userService.getUserById(userId);
+        User user = userMapper.convertFromDto(userService.getUserById(userId));
         Item item = itemRepository.findById(itemId).orElseThrow(() -> new ObjectNotFoundException(
                 String.format("Вещь с id %s не найдена", itemId)));
         List<Booking> bookings = bookingRepository.findAllByItemIdAndBookerIdAndStatus(itemId, userId, Status.APPROVED,

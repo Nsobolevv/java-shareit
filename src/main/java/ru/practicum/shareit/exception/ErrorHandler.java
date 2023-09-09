@@ -28,11 +28,11 @@ public class ErrorHandler {
         return new ErrorResponse(400, "Bad Request", message);
     }
 
-    @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler({DataExistException.class})
-    public ErrorResponse handleDataExistExceptionException(DataExistException e) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler({PaginationException.class})
+    public ErrorResponse handlePaginationException(PaginationException e) {
         log.warn(e.getClass().getSimpleName(), e);
-        return new ErrorResponse(409, "Conflict", e.getMessage());
+        return new ErrorResponse(400, "Bad Request", e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)

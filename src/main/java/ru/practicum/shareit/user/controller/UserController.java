@@ -2,16 +2,21 @@ package ru.practicum.shareit.user.controller;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpMethod;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
-import ru.practicum.shareit.exception.DataExistException;
+
 import ru.practicum.shareit.logger.Logger;
+import ru.practicum.shareit.user.dto.Marker;
 import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.UserService;
+
 import javax.validation.Valid;
 import java.util.List;
+
 
 @RestController
 @Slf4j
@@ -24,7 +29,8 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public UserDto addUser(@Valid @RequestBody UserDto userDto) throws DataExistException {
+    @Validated({Marker.OnCreate.class})
+    public UserDto addUser(@RequestBody @Validated(UserDto.NewUser.class) UserDto userDto) {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -48,7 +54,7 @@ public class UserController {
     }
 
     @GetMapping
-    public List<UserDto> getAllUsers() throws DataExistException {
+    public List<UserDto> getAllUsers() {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -60,7 +66,7 @@ public class UserController {
     }
 
     @PatchMapping("{userId}")
-    public UserDto updateUser(@PathVariable long userId, @RequestBody UserDto userDto) throws DataExistException {
+    public UserDto updateUser(@PathVariable long userId, @Valid @RequestBody UserDto userDto) {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)

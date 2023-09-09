@@ -10,9 +10,11 @@ import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingInputDto;
 import ru.practicum.shareit.booking.model.State;
 import ru.practicum.shareit.booking.service.BookingService;
+import ru.practicum.shareit.exception.PaginationException;
 import ru.practicum.shareit.logger.Logger;
 
 import javax.validation.Valid;
+
 import java.util.List;
 
 @RestController
@@ -27,7 +29,7 @@ public class BookingController {
 
     @PostMapping    // Добавление нового запроса на бронирование.
     public BookingDto addBooking(@RequestHeader(userIdHeader) long userId,
-                                                 @Valid @RequestBody BookingInputDto bookingInputDto) {
+                                 @Valid @RequestBody BookingInputDto bookingInputDto) {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -40,7 +42,7 @@ public class BookingController {
 
     @PatchMapping("/{bookingId}")   // Подтверждение или отклонение запроса на бронирование.
     public BookingDto approveOrRejectBooking(@PathVariable long bookingId, @RequestParam boolean approved,
-                                                             @RequestHeader(userIdHeader) long userId) {
+                                             @RequestHeader(userIdHeader) long userId) {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -66,7 +68,9 @@ public class BookingController {
 
     @GetMapping   // Получение списка всех бронирований текущего пользователя (можно делать выборку по статусу).
     public List<BookingDto> getBookingsOfCurrentUser(@RequestParam(defaultValue = "ALL") String state,
-                                                                     @RequestHeader(userIdHeader) long userId) {
+                                                     @RequestHeader(userIdHeader) long userId,
+                                                     @RequestParam(value = "from", defaultValue = "0") Integer from,
+                                                     @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -75,13 +79,15 @@ public class BookingController {
                 .query("state={state}")
                 .build();
         Logger.logRequest(HttpMethod.GET, uriComponents.toUriString(), state);
-        return bookingService.getBookingsOfCurrentUser(State.convert(state), userId);
+        return bookingService.getBookingsOfCurrentUser(State.convert(state), userId, from, size);
     }
 
     // Получение списка бронирований для всех вещей текущего пользователя-владельца (можно делать выборку по статусу)
     @GetMapping("/owner")
     public List<BookingDto> getBookingsOfOwner(@RequestParam(defaultValue = "ALL") String state,
-                                                               @RequestHeader(userIdHeader) long userId) {
+                                               @RequestHeader(userIdHeader) long userId,
+                                               @RequestParam(value = "from", defaultValue = "0") Integer from,
+                                               @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -90,6 +96,6 @@ public class BookingController {
                 .query("state={state}")
                 .build();
         Logger.logRequest(HttpMethod.GET, uriComponents.toUriString(), state);
-        return bookingService.getBookingsOfOwner(State.convert(state), userId);
+        return bookingService.getBookingsOfOwner(State.convert(state), userId, from, size);
     }
 }

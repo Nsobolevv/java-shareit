@@ -1,18 +1,19 @@
 package ru.practicum.shareit.item.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Pageable;
+
+import org.springframework.data.repository.PagingAndSortingRepository;
 import ru.practicum.shareit.item.model.Item;
 
 import java.util.List;
 
-public interface ItemRepository extends JpaRepository<Item, Long> {
+public interface ItemRepository extends PagingAndSortingRepository<Item, Long> {
 
-    List<Item> findAllByUserIdOrderById(long userId);
+    List<Item> findAllByUserId(Pageable pageable, long userId);
 
-    @Query(value = "select i from Item i where lower(i.name) like %?1% or lower(i.description) like %?1% " +
-            "and i.available=true")
-    List<Item> findByNameOrDescriptionLike(String text);
+    List<Item> findAllByNameOrDescriptionContainingIgnoreCaseAndAvailableTrue(Pageable pageable,
+                                                                              String name,
+                                                                              String description);
 
     void deleteById(long itemId);
 }

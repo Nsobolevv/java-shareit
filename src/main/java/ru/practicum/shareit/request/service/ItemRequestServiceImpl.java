@@ -40,9 +40,6 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         if (!users.existsById(requesterId)) {
             throw new ObjectNotFoundException(String.format("Пользователь с id %s не найден", requesterId));
         }
-        if (from < 0 || size < 1) {
-            throw new PaginationException("From must be positive or zero, size must be positive.");
-        }
         PageRequest pageRequest = PageRequest.of(
                 from / size, size, Sort.by(Sort.Direction.DESC, "created"));
         return ItemRequestListDto.builder()
@@ -54,9 +51,6 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     public ItemRequestListDto getOtherRequests(Integer from, Integer size, Long requesterId) throws PaginationException {
         if (!users.existsById(requesterId)) {
             throw new ObjectNotFoundException(String.format("Пользователь с id %s не найден", requesterId));
-        }
-        if (from < 0 || size < 1) {
-            throw new PaginationException("From must be positive or zero, size must be positive.");
         }
         PageRequest pageRequest = PageRequest.of(
                 from / size, size, Sort.by(Sort.Direction.DESC, "created"));

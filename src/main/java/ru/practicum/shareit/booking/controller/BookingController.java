@@ -2,6 +2,7 @@ package ru.practicum.shareit.booking.controller;
 
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpMethod;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -14,11 +15,14 @@ import ru.practicum.shareit.exception.PaginationException;
 import ru.practicum.shareit.logger.Logger;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 
 import java.util.List;
 
 @RestController
 @RequestMapping(path = "/bookings")
+@Validated
 @AllArgsConstructor
 public class BookingController {
     private final BookingService bookingService;
@@ -69,8 +73,8 @@ public class BookingController {
     @GetMapping   // Получение списка всех бронирований текущего пользователя (можно делать выборку по статусу).
     public List<BookingDto> getBookingsOfCurrentUser(@RequestParam(defaultValue = "ALL") String state,
                                                      @RequestHeader(userIdHeader) long userId,
-                                                     @RequestParam(value = "from", defaultValue = "0") Integer from,
-                                                     @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
+                                                     @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
+                                                     @RequestParam(defaultValue = "10") @Positive Integer size) throws PaginationException {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -86,8 +90,8 @@ public class BookingController {
     @GetMapping("/owner")
     public List<BookingDto> getBookingsOfOwner(@RequestParam(defaultValue = "ALL") String state,
                                                @RequestHeader(userIdHeader) long userId,
-                                               @RequestParam(value = "from", defaultValue = "0") Integer from,
-                                               @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
+                                               @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
+                                               @RequestParam(defaultValue = "10") @Positive Integer size) throws PaginationException {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)

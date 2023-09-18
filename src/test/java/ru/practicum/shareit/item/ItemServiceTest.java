@@ -264,12 +264,6 @@ class ItemServiceTest {
     }
 
     @Test
-    void getAllFailPaginationTest() {
-        PaginationException e = assertThrows(PaginationException.class, () -> itemService.getAllItems(-1, 10, 1L));
-        assertEquals(e.getMessage(), "From must be positive or zero, size must be positive.");
-    }
-
-    @Test
     void searchItemsTest() throws PaginationException {
         when(itemRepository.findAllByNameOrDescriptionContainingIgnoreCaseAndAvailableTrue(any(), anyString(), anyString()))
                 .thenReturn(List.of(item));
@@ -281,12 +275,6 @@ class ItemServiceTest {
     @Test
     void searchItemsIsBlankTest() throws PaginationException {
         assertEquals(itemService.searchItems(0, 10, " "), new ArrayList<>());
-    }
-
-    @Test
-    void searchItemsFailPaginationTest() {
-        PaginationException e = assertThrows(PaginationException.class, () -> itemService.searchItems(-1, 10, "text"));
-        assertEquals(e.getMessage(), "From must be positive or zero, size must be positive.");
     }
 
     @Test

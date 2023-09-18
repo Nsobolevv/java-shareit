@@ -16,6 +16,8 @@ import ru.practicum.shareit.logger.Logger;
 import javax.validation.Valid;
 
 import javax.validation.constraints.Min;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 @RestController
@@ -53,9 +55,9 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemDto> getAllItems(@RequestHeader(userIdHeader) @Min(1) Long userId,
-                                     @RequestParam(value = "from", defaultValue = "0") Integer from,
-                                     @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
+    public List<ItemDto> getAllItems(@RequestHeader(userIdHeader) @Positive Long userId,
+                                     @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
+                                     @RequestParam(defaultValue = "10") @Positive Integer size) throws PaginationException {
 
         return itemService.getAllItems(from, size, userId);
     }
@@ -63,8 +65,8 @@ public class ItemController {
 
     @GetMapping("/search")
     public List<ItemDto> searchItems(@RequestParam String text,
-                                     @RequestParam(value = "from", defaultValue = "0") Integer from,
-                                     @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
+                                     @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
+                                     @RequestParam(defaultValue = "10") @Positive Integer size) throws PaginationException {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)

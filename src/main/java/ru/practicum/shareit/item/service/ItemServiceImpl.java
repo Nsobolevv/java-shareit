@@ -147,9 +147,6 @@ public class ItemServiceImpl implements ItemService {
     @Transactional(readOnly = true)
     @Override
     public List<ItemDto> getAllItems(Integer from, Integer size, Long userId) throws PaginationException {
-        if (from < 0 || size < 1) {
-            throw new PaginationException("From must be positive or zero, size must be positive.");
-        }
         Pageable pageable = PageRequest.of(from / size, size);
         List<Item> items = itemRepository.findAllByUserId(pageable, userId);
         List<ItemDto> itemsDto = items.stream()
@@ -185,9 +182,6 @@ public class ItemServiceImpl implements ItemService {
     @Transactional(readOnly = true)
     @Override
     public List<ItemDto> searchItems(Integer from, Integer size, String text) throws PaginationException {
-        if (from < 0 || size < 1) {
-            throw new PaginationException("From must be positive or zero, size must be positive.");
-        }
         Pageable pageable = PageRequest.of(from / size, size);
         List<Item> items = text.isBlank() ? new ArrayList<>() : itemRepository.findAllByNameOrDescriptionContainingIgnoreCaseAndAvailableTrue(pageable, text, text);
         UriComponents uriComponents = UriComponentsBuilder.newInstance()

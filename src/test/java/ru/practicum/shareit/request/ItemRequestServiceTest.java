@@ -84,14 +84,6 @@ class ItemRequestServiceTest {
     }
 
     @Test
-    void getPrivateRequestsWithFailPaginationTest() {
-        when(users.existsById(anyLong()))
-                .thenReturn(true);
-        PaginationException e = assertThrows(PaginationException.class, () -> itemRequestService.getPrivateRequests(-1, 10, 1L));
-        assertEquals(e.getMessage(), "From must be positive or zero, size must be positive.");
-    }
-
-    @Test
     void getPrivateRequestsWrongIdTest() {
         when(users.existsById(anyLong()))
                 .thenReturn(false);
@@ -108,14 +100,6 @@ class ItemRequestServiceTest {
         when(mapper.mapToRequestDtoResponseWithMD(List.of(itemRequest)))
                 .thenReturn(List.of(requestDtoResponseWithMD));
         assertEquals(itemRequestService.getOtherRequests(0, 10, 2L), itemRequestListDto);
-    }
-
-    @Test
-    void getOtherRequestsWithFailPaginationTest() {
-        when(users.existsById(anyLong()))
-                .thenReturn(true);
-        PaginationException e = assertThrows(PaginationException.class, () -> itemRequestService.getOtherRequests(0, 0, 2L));
-        assertEquals(e.getMessage(), "From must be positive or zero, size must be positive.");
     }
 
     @Test

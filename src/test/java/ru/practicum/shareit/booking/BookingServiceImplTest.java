@@ -466,12 +466,6 @@ class BookingServiceImplTest {
     }
 
     @Test
-    void getBookingsOfCurrentUserFailPaginationTest() {
-        PaginationException e = assertThrows(PaginationException.class, () -> bookingService.getBookingsOfCurrentUser(State.ALL, 1L, -1, 1));
-        assertEquals(e.getMessage(), "From must be positive or zero, size must be positive.");
-    }
-
-    @Test
     void getBookingsOfOwnerWAITINGTest() throws PaginationException {
         when(userService.getUserById(anyLong()))
                 .thenReturn(userDto);
@@ -572,11 +566,5 @@ class BookingServiceImplTest {
         when(bookingMapper.convertToDto(any()))
                 .thenReturn(bookingDto);
         assertEquals(bookingService.getBookingsOfOwner(State.ALL, 1L, 0, 1), List.of(bookingDto));
-    }
-
-    @Test
-    void getBookingsOfOwnerFailPaginationTest() {
-        PaginationException e = assertThrows(PaginationException.class, () -> bookingService.getBookingsOfOwner(State.ALL, 1L, 1, 0));
-        assertEquals(e.getMessage(), "From must be positive or zero, size must be positive.");
     }
 }

@@ -126,9 +126,6 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     @Override
     public List<BookingDto> getBookingsOfCurrentUser(State state, long bookerId, Integer from, Integer size) throws PaginationException {
-        if (from < 0 || size < 1) {
-            throw new PaginationException("From must be positive or zero, size must be positive.");
-        }
         User booker = userMapper.convertFromDto(userService.getUserById(bookerId));
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
         List<Booking> bookings;
@@ -173,9 +170,6 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     @Override
     public List<BookingDto> getBookingsOfOwner(State state, long ownerId, Integer from, Integer size) throws PaginationException {
-        if (from < 0 || size < 1) {
-            throw new PaginationException("From must be positive or zero, size must be positive.");
-        }
         User owner = userMapper.convertFromDto(userService.getUserById(ownerId));
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
         List<Booking> bookings;

@@ -1,6 +1,8 @@
 package ru.practicum.shareit.booking.service;
 
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
@@ -12,16 +14,13 @@ import ru.practicum.shareit.booking.dto.BookingInputDto;
 import ru.practicum.shareit.booking.mapper.BookingMapper;
 import ru.practicum.shareit.booking.model.*;
 import ru.practicum.shareit.booking.repository.BookingRepository;
-import ru.practicum.shareit.exception.AccessException;
-import ru.practicum.shareit.exception.InvalidDataException;
-import ru.practicum.shareit.exception.ObjectNotAvailableException;
-import ru.practicum.shareit.exception.ObjectNotFoundException;
+import ru.practicum.shareit.exception.*;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.logger.Logger;
 import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.UserService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -91,7 +90,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Бронирование с id %d не найдено", bookingId)));
         if (isUnableToAccess(user.getId(), booking, accessLevel)) {
-            throw new AccessException(String.format("У пользователя с id %d нет прав на просмотр бронирования с id %d,",
+            throw new AccessException(String.format("У пользователя с id %d нет прав на просмотр бронирования с id %d",
                     userId, bookingId));
         }
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
@@ -111,7 +110,7 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(
                 () -> new ObjectNotFoundException(String.format("Бронирование с id %d не найдено", bookingId)));
         if (isUnableToAccess(user.getId(), booking, accessLevel)) {
-            throw new AccessException(String.format("У пользователя с id %d нет прав на просмотр бронирования с id %d,",
+            throw new AccessException(String.format("У пользователя с id %d нет прав на просмотр бронирования с id %d",
                     userId, bookingId));
         }
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
@@ -126,33 +125,36 @@ public class BookingServiceImpl implements BookingService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<BookingDto> getBookingsOfCurrentUser(State state, long bookerId) {
+    public List<BookingDto> getBookingsOfCurrentUser(State state, long bookerId, Integer from, Integer size) throws PaginationException {
+        if (from < 0 || size < 1) {
+            throw new PaginationException("From must be positive or zero, size must be positive.");
+        }
         User booker = userMapper.convertFromDto(userService.getUserById(bookerId));
-        Sort sort = Sort.by(Sort.Direction.DESC, "start");
+        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
         List<Booking> bookings;
         switch (state) {
             case WAITING:
                 bookings = bookingRepository.findAllByBookerIdAndStatus(booker.getId(),
-                        Status.WAITING, sort);
+                        Status.WAITING, pageable);
                 break;
             case REJECTED:
                 bookings = bookingRepository.findAllByBookerIdAndStatus(booker.getId(),
-                        Status.REJECTED, sort);
+                        Status.REJECTED, pageable);
                 break;
             case PAST:
                 bookings = bookingRepository.findAllByBookerIdAndEndBefore(booker.getId(),
-                        LocalDateTime.now(), sort);
+                        LocalDateTime.now(), pageable);
                 break;
             case FUTURE:
                 bookings = bookingRepository.findAllByBookerIdAndStartAfter(booker.getId(),
-                        LocalDateTime.now(), sort);
+                        LocalDateTime.now(), pageable);
                 break;
             case CURRENT:
                 bookings = bookingRepository.findAllByBookerIdAndStartBeforeAndEndAfter(booker.getId(),
-                        LocalDateTime.now(), sort);
+                        LocalDateTime.now(), pageable);
                 break;
             default:
-                bookings = bookingRepository.findAllByBookerId(booker.getId(), sort);
+                bookings = bookingRepository.findAllByBookerId(booker.getId(), pageable);
         }
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
@@ -170,33 +172,36 @@ public class BookingServiceImpl implements BookingService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<BookingDto> getBookingsOfOwner(State state, long ownerId) {
+    public List<BookingDto> getBookingsOfOwner(State state, long ownerId, Integer from, Integer size) throws PaginationException {
+        if (from < 0 || size < 1) {
+            throw new PaginationException("From must be positive or zero, size must be positive.");
+        }
         User owner = userMapper.convertFromDto(userService.getUserById(ownerId));
-        Sort sort = Sort.by(Sort.Direction.DESC, "start");
+        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
         List<Booking> bookings;
         switch (state) {
             case WAITING:
                 bookings = bookingRepository.findAllByOwnerIdAndStatus(owner.getId(),
-                        Status.WAITING, sort);
+                        Status.WAITING, pageable);
                 break;
             case REJECTED:
                 bookings = bookingRepository.findAllByOwnerIdAndStatus(owner.getId(),
-                        Status.REJECTED, sort);
+                        Status.REJECTED, pageable);
                 break;
             case PAST:
                 bookings = bookingRepository.findAllByOwnerIdAndEndBefore(owner.getId(),
-                        LocalDateTime.now(), sort);
+                        LocalDateTime.now(), pageable);
                 break;
             case FUTURE:
                 bookings = bookingRepository.findAllByOwnerIdAndStartAfter(owner.getId(),
-                        LocalDateTime.now(), sort);
+                        LocalDateTime.now(), pageable);
                 break;
             case CURRENT:
                 bookings = bookingRepository.findAllByOwnerIdAndStartBeforeAndEndAfter(owner.getId(),
-                        LocalDateTime.now(), sort);
+                        LocalDateTime.now(), pageable);
                 break;
             default:
-                bookings = bookingRepository.findAllByOwnerId(owner.getId(), sort);
+                bookings = bookingRepository.findAllByOwnerId(owner.getId(), pageable);
         }
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)

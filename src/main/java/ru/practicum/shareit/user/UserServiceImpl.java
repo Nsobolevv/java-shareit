@@ -1,13 +1,13 @@
-package ru.practicum.shareit.user.service;
+package ru.practicum.shareit.user;
 
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
-import ru.practicum.shareit.exception.DataExistException;
+
 import ru.practicum.shareit.exception.ObjectNotFoundException;
 import ru.practicum.shareit.logger.Logger;
 import ru.practicum.shareit.user.dto.UserDto;
@@ -31,46 +31,37 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto addUser(UserDto userDto) {
         User user = userMapper.convertFromDto(userDto);
-        try {
-            User userSaved = userRepository.save(user);
-            UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                    .scheme(protocol)
-                    .host(host)
-                    .port(port)
-                    .path("/users")
-                    .build();
-            Logger.logSave(HttpMethod.POST, uriComponents.toUriString(), userSaved.toString());
-            return userMapper.convertToDto(userSaved);
-        } catch (DataExistException e) {
-            throw new DataExistException(String.format("Пользователь с email %s уже есть в базе", user.getEmail()));
-        }
-
+        User userSaved = userRepository.save(user);
+        UriComponents uriComponents = UriComponentsBuilder.newInstance()
+                .scheme(protocol)
+                .host(host)
+                .port(port)
+                .path("/users")
+                .build();
+        Logger.logSave(HttpMethod.POST, uriComponents.toUriString(), userSaved.toString());
+        return userMapper.convertToDto(userSaved);
     }
 
     @Transactional
     @Override
-    public  UserDto updateUser(long id, UserDto userDto) {
-        User user = userMapper.convertFromDto(userDto);
-        try {
-            User targetUser = userMapper.convertFromDto(getUserById(id));
-            if (StringUtils.hasLength(user.getEmail())) {
-                targetUser.setEmail(user.getEmail());
-            }
-            if (StringUtils.hasLength(user.getName())) {
-                targetUser.setName(user.getName());
-            }
-            User userSaved = userRepository.save(targetUser);
-            UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                    .scheme(protocol)
-                    .host(host)
-                    .port(port)
-                    .path("/users/{id}")
-                    .build();
-            Logger.logSave(HttpMethod.PATCH, uriComponents.toUriString(), userSaved.toString());
-            return userMapper.convertToDto(userSaved);
-        } catch (DataExistException e) {
-            throw new DataExistException(String.format("Пользователь с email %s уже есть в базе", user.getEmail()));
+    public UserDto updateUser(long id, UserDto userDto) {
+        User targetUser = userRepository.findById(id).orElseThrow(() ->
+                new ObjectNotFoundException(String.format("Пользователь с id %s не найден", id)));
+        if (userDto.getEmail() != null) {
+            targetUser.setEmail(userDto.getEmail());
         }
+        if (userDto.getName() != null) {
+            targetUser.setName(userDto.getName());
+        }
+        User userSaved = userRepository.save(targetUser);
+        UriComponents uriComponents = UriComponentsBuilder.newInstance()
+                .scheme(protocol)
+                .host(host)
+                .port(port)
+                .path("/users/{id}")
+                .build();
+        Logger.logSave(HttpMethod.PATCH, uriComponents.toUriString(), userSaved.toString());
+        return userMapper.convertToDto(userSaved);
     }
 
     @Transactional(readOnly = true)

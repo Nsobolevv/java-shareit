@@ -1,16 +1,21 @@
 package ru.practicum.shareit.item.controller;
 
 import lombok.AllArgsConstructor;
+
+
 import org.springframework.http.HttpMethod;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import ru.practicum.shareit.exception.PaginationException;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.service.ItemService;
 import ru.practicum.shareit.logger.Logger;
 
 import javax.validation.Valid;
+
+import javax.validation.constraints.Min;
 import java.util.List;
 
 @RestController
@@ -48,19 +53,18 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemDto> getAllItems(@RequestHeader(userIdHeader) long userId) {
-        UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                .scheme(protocol)
-                .host(host)
-                .port(port)
-                .path("/items")
-                .build();
-        Logger.logRequest(HttpMethod.GET, uriComponents.toUriString(), String.valueOf(userId));
-        return itemService.getAllItems(userId);
+    public List<ItemDto> getAllItems(@RequestHeader(userIdHeader) @Min(1) Long userId,
+                                     @RequestParam(value = "from", defaultValue = "0") Integer from,
+                                     @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
+
+        return itemService.getAllItems(from, size, userId);
     }
 
+
     @GetMapping("/search")
-    public List<ItemDto> searchItems(@RequestParam String text) {
+    public List<ItemDto> searchItems(@RequestParam String text,
+                                     @RequestParam(value = "from", defaultValue = "0") Integer from,
+                                     @RequestParam(value = "size", defaultValue = "10") Integer size) throws PaginationException {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -69,7 +73,7 @@ public class ItemController {
                 .query("search?text={text}")
                 .build();
         Logger.logRequest(HttpMethod.GET, uriComponents.toUriString(), text);
-        return itemService.searchItems(text);
+        return itemService.searchItems(from, size, text);
     }
 
     @PatchMapping("{itemId}")
@@ -98,7 +102,7 @@ public class ItemController {
 
     @PostMapping("/{itemId}/comment")
     public CommentDto addComment(@RequestHeader(userIdHeader) long userId, @PathVariable long itemId,
-                                                 @RequestBody @Valid CommentDto commentDto) {
+                                 @RequestBody @Valid CommentDto commentDto) {
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -108,4 +112,6 @@ public class ItemController {
         Logger.logRequest(HttpMethod.POST, uriComponents.toUriString(), commentDto.toString());
         return itemService.addComment(userId, itemId, commentDto);
     }
+
+
 }

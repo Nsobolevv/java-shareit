@@ -1,10 +1,13 @@
 package ru.practicum.shareit.item.service;
 
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpMethod;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.shareit.booking.dto.BookingDtoShort;
@@ -14,6 +17,7 @@ import ru.practicum.shareit.booking.model.Status;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.ObjectNotAvailableException;
 import ru.practicum.shareit.exception.ObjectNotFoundException;
+import ru.practicum.shareit.exception.PaginationException;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.mapper.CommentMapper;
@@ -23,10 +27,14 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.logger.Logger;
+import ru.practicum.shareit.request.model.ItemRequest;
+import ru.practicum.shareit.request.repository.ItemRequestRepository;
 import ru.practicum.shareit.user.mapper.UserMapper;
 import ru.practicum.shareit.user.model.User;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.UserService;
 import org.springframework.util.StringUtils;
+import org.springframework.data.domain.Pageable;
+
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -44,6 +52,7 @@ public class ItemServiceImpl implements ItemService {
     private final BookingMapper bookingMapper;
     private final CommentRepository commentRepository;
     private final CommentMapper commentMapper;
+    private final ItemRequestRepository itemRequests;
     private final String host = "localhost";
     private final String port = "8080";
     private final String protocol = "http";
@@ -54,6 +63,12 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemMapper.convertFromDto(itemDto);
         User user = userMapper.convertFromDto(userService.getUserById(userId));
         item.setUserId(user.getId());
+        if (itemDto.getRequestId() != null) {
+            ItemRequest itemRequest = itemRequests.findById(itemDto.getRequestId())
+                    .orElseThrow(() -> new ObjectNotFoundException(String.format("Запроса с id=%s нет", itemDto.getRequestId())));
+
+            item.setRequest(itemRequest);
+        }
         Item itemSaved = itemRepository.save(item);
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
@@ -64,6 +79,7 @@ public class ItemServiceImpl implements ItemService {
         Logger.logSave(HttpMethod.POST, uriComponents.toUriString(), itemSaved.toString());
         return itemMapper.convertToDto(itemSaved);
     }
+
 
     @Transactional
     @Override
@@ -76,24 +92,24 @@ public class ItemServiceImpl implements ItemService {
             throw new ObjectNotFoundException(String.format("У пользователя с id %s не найдена вещь с id %s",
                     userId, itemId));
         }
-            if (item.getAvailable() != null) {
-                targetItem.setAvailable(item.getAvailable());
-            }
-            if (StringUtils.hasLength(item.getName())) {
-                targetItem.setName(item.getName());
-            }
-            if (StringUtils.hasLength(item.getDescription())) {
-                targetItem.setDescription(item.getDescription());
-            }
-            Item itemSaved = itemRepository.save(targetItem);
-            UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                    .scheme(protocol)
-                    .host(host)
-                    .port(port)
-                    .path("/items/{itemId}")
-                    .build();
-            Logger.logSave(HttpMethod.PATCH, uriComponents.toUriString(), itemSaved.toString());
-            return itemMapper.convertToDto(itemSaved);
+        if (item.getAvailable() != null) {
+            targetItem.setAvailable(item.getAvailable());
+        }
+        if (StringUtils.hasLength(item.getName())) {
+            targetItem.setName(item.getName());
+        }
+        if (StringUtils.hasLength(item.getDescription())) {
+            targetItem.setDescription(item.getDescription());
+        }
+        Item itemSaved = itemRepository.save(targetItem);
+        UriComponents uriComponents = UriComponentsBuilder.newInstance()
+                .scheme(protocol)
+                .host(host)
+                .port(port)
+                .path("/items/{itemId}")
+                .build();
+        Logger.logSave(HttpMethod.PATCH, uriComponents.toUriString(), itemSaved.toString());
+        return itemMapper.convertToDto(itemSaved);
     }
 
     @Transactional(readOnly = true)
@@ -130,24 +146,28 @@ public class ItemServiceImpl implements ItemService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<ItemDto> getAllItems(long userId) {
-        User user = userMapper.convertFromDto(userService.getUserById(userId));
-        List<Item> items = itemRepository.findAllByUserIdOrderById(user.getId());
+    public List<ItemDto> getAllItems(Integer from, Integer size, Long userId) throws PaginationException {
+        if (from < 0 || size < 1) {
+            throw new PaginationException("From must be positive or zero, size must be positive.");
+        }
+        Pageable pageable = PageRequest.of(from / size, size);
+        List<Item> items = itemRepository.findAllByUserId(pageable, userId);
         List<ItemDto> itemsDto = items.stream()
                 .map(itemMapper::convertToDto)
                 .collect(Collectors.toList());
-        Logger.logInfo(HttpMethod.GET, "/items",  items.toString());
+        Logger.logInfo(HttpMethod.GET, "/items", items.toString());
         List<Booking> bookings = bookingRepository.findAllByOwnerId(userId,
                 Sort.by(Sort.Direction.DESC, "start"));
         List<BookingDtoShort> bookingDtoShorts = bookings.stream()
                 .map(bookingMapper::convertToDtoShort)
                 .collect(Collectors.toList());
-        Logger.logInfo(HttpMethod.GET, "/items",  bookings.toString());
+        Logger.logInfo(HttpMethod.GET, "/items", bookings.toString());
         List<Comment> comments = commentRepository.findAllByItemIdIn(
                 items.stream()
                         .map(Item::getId)
                         .collect(Collectors.toList()),
                 Sort.by(Sort.Direction.DESC, "created"));
+
         itemsDto.forEach(itemDto -> {
             setBookings(itemDto, bookingDtoShorts);
             setComments(itemDto, comments);
@@ -164,8 +184,12 @@ public class ItemServiceImpl implements ItemService {
 
     @Transactional(readOnly = true)
     @Override
-    public List<ItemDto> searchItems(String text) {
-        List<Item> items = text.isBlank() ? new ArrayList<>() : itemRepository.findByNameOrDescriptionLike(text.toLowerCase());
+    public List<ItemDto> searchItems(Integer from, Integer size, String text) throws PaginationException {
+        if (from < 0 || size < 1) {
+            throw new PaginationException("From must be positive or zero, size must be positive.");
+        }
+        Pageable pageable = PageRequest.of(from / size, size);
+        List<Item> items = text.isBlank() ? new ArrayList<>() : itemRepository.findAllByNameOrDescriptionContainingIgnoreCaseAndAvailableTrue(pageable, text, text);
         UriComponents uriComponents = UriComponentsBuilder.newInstance()
                 .scheme(protocol)
                 .host(host)
@@ -183,17 +207,7 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     @Override
     public void removeItem(long userId, long itemId) {
-        userService.getUserById(userId);
-        Item item = itemRepository.findById(itemId).orElseThrow(() ->
-                new ObjectNotFoundException(String.format("Вещь с id %s не найдена", itemId)));
-        itemRepository.deleteById(item.getId());
-        UriComponents uriComponents = UriComponentsBuilder.newInstance()
-                .scheme(protocol)
-                .host(host)
-                .port(port)
-                .path("/items/{itemId}")
-                .build();
-        Logger.logSave(HttpMethod.DELETE, uriComponents.toUriString(), "Вещь удалена");
+        itemRepository.deleteById(itemId);
     }
 
     @Transactional

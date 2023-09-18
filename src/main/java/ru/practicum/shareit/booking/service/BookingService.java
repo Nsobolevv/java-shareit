@@ -1,10 +1,12 @@
 package ru.practicum.shareit.booking.service;
 
+
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingInputDto;
 import ru.practicum.shareit.booking.model.AccessLevel;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.State;
+import ru.practicum.shareit.exception.PaginationException;
 
 import java.util.List;
 
@@ -18,7 +20,7 @@ public interface BookingService {
 
     BookingDto getBooking(long bookingId, long userId, AccessLevel accessLevel);
 
-    List<BookingDto> getBookingsOfCurrentUser(State state, long bookerId);
+    List<BookingDto> getBookingsOfCurrentUser(State state, long bookerId, Integer from, Integer size) throws PaginationException;
 
-    List<BookingDto> getBookingsOfOwner(State state, long ownerId);
+    List<BookingDto> getBookingsOfOwner(State state, long ownerId, Integer from, Integer size) throws PaginationException;
 }
